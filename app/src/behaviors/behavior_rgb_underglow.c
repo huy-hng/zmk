@@ -14,6 +14,14 @@
 #include <zmk/rgb_underglow.h>
 #include <zmk/keymap.h>
 
+struct rgb_underglow_state {
+    struct zmk_led_hsb color;
+    uint8_t animation_speed;
+    uint8_t current_effect;
+    uint16_t animation_step;
+    bool on;
+};
+
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
@@ -87,6 +95,30 @@ on_keymap_binding_convert_central_state_dependent_params(struct zmk_behavior_bin
         binding->param2 = zmk_rgb_underglow_calc_effect(1);
         break;
     }
+    case RGB_SET_HUE: {
+        struct rgb_underglow_state state = zmk_rgb_underglow_return_state();
+        struct zmk_led_hsb color = state.color;
+
+        binding->param1 = RGB_COLOR_HSB_CMD;
+        binding->param2 = RGB_COLOR_HSB_VAL(binding->param2, color.s, color.b);
+        break;
+    }
+    case RGB_SET_SAT: {
+        struct rgb_underglow_state state = zmk_rgb_underglow_return_state();
+        struct zmk_led_hsb color = state.color;
+
+        binding->param1 = RGB_COLOR_HSB_CMD;
+        binding->param2 = RGB_COLOR_HSB_VAL(color.h, binding->param2, color.b);
+        break;
+    }
+    case RGB_SET_BRT: {
+        struct rgb_underglow_state state = zmk_rgb_underglow_return_state();
+        struct zmk_led_hsb color = state.color;
+
+        binding->param1 = RGB_COLOR_HSB_CMD;
+        binding->param2 = RGB_COLOR_HSB_VAL(color.h, color.s, binding->param2);
+        break;
+    }
     default:
         return 0;
     }
@@ -131,6 +163,12 @@ static int on_keymap_binding_pressed(struct zmk_behavior_binding *binding,
         return zmk_rgb_underglow_set_hsb((struct zmk_led_hsb){.h = (binding->param2 >> 16) & 0xFFFF,
                                                               .s = (binding->param2 >> 8) & 0xFF,
                                                               .b = binding->param2 & 0xFF});
+    case RGB_SET_HUE:
+        return zmk_rgb_underglow_set_hue(binding->param2);
+    case RGB_SET_SAT:
+        return zmk_rgb_underglow_set_sat(binding->param2);
+    case RGB_SET_BRT:
+        return zmk_rgb_underglow_set_brt(binding->param2);
     }
 
     return -ENOTSUP;
